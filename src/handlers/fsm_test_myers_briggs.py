@@ -46,11 +46,11 @@ async def process_cancel_command_state_order(
         admin=user_data.admin
     )
     await message.answer(
-        text=result_test_text.start_test_text['cancel_text'],
+        text=result_test_text.common_text['cancel_text'],
         reply_markup=types.ReplyKeyboardRemove()
     )
     await message.answer(
-        text=result_test_text.start_test_text['select_item'],
+        text=result_test_text.common_text['select_item'],
         reply_markup=keyboard
     )
     await state.clear()
