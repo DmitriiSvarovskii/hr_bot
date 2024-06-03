@@ -7,7 +7,7 @@ import os
 from aiogram import Bot, Dispatcher
 from aiogram.fsm.storage.redis import RedisStorage, Redis
 
-from src.config import settings
+from src.config.config import settings
 from src.handlers import router as main_router
 from src.utils import set_menu
 
