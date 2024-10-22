@@ -76,10 +76,11 @@ async def process_question_answer(
     else:
         data = await state.get_data()
         scores, types_list = calculate_scores(data)
-        result_test_data = test_schemas.ResultTestCreate(
-            user_id=message.chat.id,
-            **scores)
-        await result_test_db.db_create_new_result_test(data=result_test_data)
+        
+        # result_test_data = test_schemas.ResultTestCreate(
+        #     user_id=message.chat.id,
+        #     **scores)
+        # await result_test_db.db_create_new_result_test(data=result_test_data)
 
         # Отправляем результаты пользователю
         for personality_type in types_list:

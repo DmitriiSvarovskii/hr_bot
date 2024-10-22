@@ -10,6 +10,11 @@ from src.lexicons import text_main_menu
 router = Router(name=__name__)
 
 
+# @router.message(Command("test"))
+# async def process_start_command_test(message: types.Message, bot: Bot):
+#     await bot.send_message(chat_id=-1001519347936, text='Работает, но где?')
+
+
 @router.message(CommandStart())
 async def process_start_command(message: types.Message):
     if message.chat.type == 'private':
