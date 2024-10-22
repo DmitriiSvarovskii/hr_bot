@@ -1,6 +1,7 @@
 from aiogram import types, Router, F
 from aiogram.exceptions import TelegramBadRequest
 from aiogram.fsm.context import FSMContext
+from aiogram.types import FSInputFile
 
 from src.db import user_db, result_test_db
 from src.lexicons import text_main_menu, questions, answers, result_test_text
@@ -8,6 +9,7 @@ from src.keyboards import main_kb, kb_test_myers_briggs as kb
 from src.state import FSMMyersBriggs
 from src.schemas import test_schemas
 from src.utils.calculate import calculate_scores
+from src.utils.result_test_utils import get_pdf_path
 
 
 router = Router(name=__name__)
@@ -62,8 +64,7 @@ async def process_question_answer(
 ):
     question_number = int((await state.get_state()).split('_')[-1])
     await state.update_data({f"question_{question_number}": message.text})
-    next_question_number = question_number + \
-        1
+    next_question_number = question_number + 1
     if next_question_number <= len(questions.questions):
         await message.answer(
             text=questions.questions[f'question_{next_question_number}'],
@@ -74,18 +75,28 @@ async def process_question_answer(
         )
     else:
         data = await state.get_data()
-        data_test = calculate_scores(data)
+        scores, types_list = calculate_scores(data)
         result_test_data = test_schemas.ResultTestCreate(
             user_id=message.chat.id,
-            **data_test)
+            **scores)
         await result_test_db.db_create_new_result_test(data=result_test_data)
-        result_text = await result_test_text.generate_result_finish_test(
-            data=result_test_data
-        )
-        await message.answer(
-            text=result_text,
-            reply_markup=types.ReplyKeyboardRemove()
-        )
+
+        # Отправляем результаты пользователю
+        for personality_type in types_list:
+            pdf_path = await get_pdf_path(personality_type)
+            if pdf_path:
+                pdf_file = FSInputFile(pdf_path)
+                await message.answer_document(
+                    document=pdf_file,
+                    caption=f"Ваш результат: {personality_type.upper()}",
+                    reply_markup=types.ReplyKeyboardRemove()
+                )
+            else:
+                await message.answer(
+                    text=f"К сожалению, описание для типа {personality_type.upper()} отсутствует.",
+                    reply_markup=types.ReplyKeyboardRemove()
+                )
+
         user_data = await user_db.db_get_user_data(
             user_id=message.chat.id
         )
@@ -98,10 +109,60 @@ async def process_question_answer(
         )
         await state.clear()
 
-
+# Регистрация обработчиков для каждого вопроса остается без изменений
 for i in range(1, len(questions.questions) + 1):
     router.message.register(
         process_question_answer,
         getattr(FSMMyersBriggs, f"question_{i}"),
         (F.text == answers.answers['a']) | (F.text == answers.answers['b'])
     )
+
+# async def process_question_answer(
+#     message: types.Message,
+#     state: FSMContext
+# ):
+#     question_number = int((await state.get_state()).split('_')[-1])
+#     await state.update_data({f"question_{question_number}": message.text})
+#     next_question_number = question_number + \
+#         1
+#     if next_question_number <= len(questions.questions):
+#         await message.answer(
+#             text=questions.questions[f'question_{next_question_number}'],
+#             reply_markup=kb.create_kb_answer()
+#         )
+#         await state.set_state(
+#             getattr(FSMMyersBriggs, f"question_{next_question_number}")
+#         )
+#     else:
+#         data = await state.get_data()
+#         data_test = calculate_scores(data)
+#         result_test_data = test_schemas.ResultTestCreate(
+#             user_id=message.chat.id,
+#             **data_test)
+#         await result_test_db.db_create_new_result_test(data=result_test_data)
+#         result_text = await result_test_text.generate_result_finish_test(
+#             data=result_test_data
+#         )
+#         await message.answer(
+#             text=result_text,
+#             reply_markup=types.ReplyKeyboardRemove()
+#         )
+#         user_data = await user_db.db_get_user_data(
+#             user_id=message.chat.id
+#         )
+#         keyboard = await main_kb.create_kb_main(
+#             admin=user_data.admin
+#         )
+#         await message.answer(
+#             text=text_main_menu.main_menu_dict['start'],
+#             reply_markup=keyboard
+#         )
+#         await state.clear()
+
+
+# for i in range(1, len(questions.questions) + 1):
+#     router.message.register(
+#         process_question_answer,
+#         getattr(FSMMyersBriggs, f"question_{i}"),
+#         (F.text == answers.answers['a']) | (F.text == answers.answers['b'])
+#     )

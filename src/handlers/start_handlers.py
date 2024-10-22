@@ -13,7 +13,7 @@ router = Router(name=__name__)
 @router.message(CommandStart())
 async def process_start_command(message: types.Message):
     if message.chat.type == 'private':
-
+        print(message.text)
         user_data = await user_db.db_get_user_data(
             user_id=message.chat.id
         )
